@@ -1,93 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrovať sa</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <title>Register</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-
-    <nav class="navbar bg-body-tertiary">
-        <div class="container-fluid">
-            <a class="navbar-brand">myPHPapp</a>
-            <form class="d-flex" role="login">
-            <a class="btn btn-outline-primary me-2">Prihlásiť sa</a>
-            <a class="btn btn-primary">Registrovať</a>
-            </form>
-        </div>
-    </nav>
+<body class="bg-light">
 
 
-<form class="row g-3 m-5 p-5 bg-body-tertiary rounded" method="post">
-  <div class="col-md-6">
-    <label for="ziskajEmail" class="form-label">Email</label>
-    <input type="email" class="form-control" id="ziskajEmail" required>
-  </div>
-  <div class="col-md-6">
-    <label for="ziskajHeslo" class="form-label">Heslo</label>
-    <input type="password" class="form-control" id="ziskajHeslo" required>
-  </div>
-  <div class="col-12">
-    <label for="ziskajAdresa" class="form-label">Adresa</label>
-    <input type="text" class="form-control" id="ziskajAdresa" required>
-  </div>
-  <div class="col-md-6">
-    <label for="ziskajMesto" class="form-label">Mesto</label>
-    <input type="text" class="form-control" id="ziskajMesto" required>
-  </div>
-  <div class="col-md-4">
-    <label for="ziskajStat" class="form-label">Štát</label>
-    <input type="text" class="form-control" id="ziskajStat" required>
-  </div>
-  <div class="col-md-2">
-    <label for="ziskajPSC" class="form-label">PSČ</label>
-    <input type="text" class="form-control" id="ziskajPSC" required>
-  </div>
-  <div class="col-12">
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="gridCheck" required>
-      <label class="form-check-label" for="gridCheck">
-        Súhlasím so spracovaním osobných údajov
-      </label>
-    </div>
-  </div>
-  <div class="col-12">
-    <button type="register" class="btn btn-primary">Registrovať sa</button>
-  </div>
-</form>
+
 
 <?php
+session_start();
+include 'db.php';
 
-    $dbhost = "localhost";
-    $dbusername = "root";
-    $dbpassword = "root";
+$message = "";
 
-    $conn = mysqli_connect($dbhost, $dbusername, $dbpassword);
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = trim($_POST["name"]);
+    $email = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
 
-    if ($conn->connect_error) {
-        die("Nepodarilo sa pripojiť k DB") . $conn->connect_error();
+    if (!empty($name) && !empty($email) && !empty($password)) {
+        $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
+        $check->bind_param("s", $email);
+        $check->execute();
+        $result = $check->get_result();
+
+        if ($result->num_rows > 0) {
+            $message = "Email už existuje.";
+        } else {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $name, $email, $hashedPassword);
+
+            if ($stmt->execute()) {
+                header("Location: login.php");
+                exit();
+            } else {
+                $message = "Chyba pri registrácii.";
+            }
+        }
+    } else {
+        $message = "Vyplň všetky polia.";
     }
-    else{
-        echo "HOORAY! Pripojené k DB";
-    };
-
-
-    if (isset($_POST["register"])) {
-      $email = $_POST['ziskajEmail'];
-      $heslo = $_POST['ziskajHeslo'];
-      $heslo_hash = password_hash($heslo, PASSWORD_DEFAULT);
-      $adresa = $_POST['ziskajAdresa'];
-      $mesto = $_POST['ziskajMesto'];
-      $stat = $_POST['ziskajStat'];
-      $psc = $_POST['ziskajPSC'];
-
-      $sql = 
-        "INSERT INTO pouzivatel (email, heslo_hash, adresa, mesto, stat, psc)
-        VALUES $email, $heslo_hash, $adresa, $mesto, $stat, $psc";
-      }
+}
 ?>
+
+
+
+
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="mb-4 text-center">Registrácia</h2>
+
+                        <?php if ($message != "") { ?>
+                            <div class="alert alert-danger"><?php echo $message; ?></div>
+                        <?php } ?>
+
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Meno</label>
+                                <input type="text" name="name" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Heslo</label>
+                                <input type="password" name="password" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Registrovať sa</button>
+                        </form>
+
+                        <p class="mt-3 text-center mb-0">Máš účet? <a href="login.php">Prihlás sa</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
